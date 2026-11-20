@@ -860,10 +860,7 @@ url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMExce
   <!-- Supabase JS SDK v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
   <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest" crossorigin="anonymous"></script>
-  <!-- JSZip untuk Generate Paket ZIP Siap Deploy -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
-
+    <script src="https://unpkg.com/lucide@latest" crossorigin="anonymous"></
   <style>
     * {
       -webkit-tap-highlight-color: transparent;
@@ -930,15 +927,6 @@ url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMExce
 
   <!-- TOAST NOTIFICATION CONTAINER -->
   <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-md flex flex-col gap-2 pointer-events-none"></div>
-
-  <!-- MODAL SETUP SQL SUPABASE -->
-  <div id="sql-modal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
-    <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-lg max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
-      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="database" aria-hidden="true" class="lucide lucide-database w-5 h-5"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg>
-          </div>
           <div>
             <h3 class="font-display font-bold text-base text-slate-900">Setup Tabel Supabase</h3>
             <p class="text-xs text-slate-500">Salin &amp; tempel di SQL Editor Supabase Anda</p>
@@ -1209,14 +1197,6 @@ ALTER TABLE public.fih_settings DISABLE ROW LEVEL SECURITY;</pre>
           <span id="db-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
           <span id="db-status-text" class="text-[11px] text-slate-500">Tabel belum dibuat (Klik Setup SQL)</span>
         </div>
-        <div class="flex items-center gap-1.5">
-          <button type="button" onclick="downloadProjectZip()" class="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 px-2.5 py-1.5 rounded-xl border border-emerald-200">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="download" aria-hidden="true" class="lucide lucide-download w-3.5 h-3.5"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>
-            Download ZIP
-          </button>
-          <button type="button" onclick="openSqlModal()" class="text-[11px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2.5 py-1.5 rounded-xl border border-blue-100">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="database" aria-hidden="true" class="lucide lucide-database w-3.5 h-3.5"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg>
-            Setup SQL
           </button>
         </div>
       </div>
@@ -1639,8 +1619,6 @@ contoh3@gmail.com|sandi123" class="w-full bg-slate-50 border border-slate-200 ro
                   <p class="text-[11px] text-slate-300">Kelola setoran, penarikan, status BUKA/TUTUP &amp; harga</p>
                 </div>
               </div>
-              <button onclick="openSqlModal()" class="px-2.5 py-1.5 rounded-xl bg-white/10 text-[11px] font-bold">SQL</button>
-            </div>
 
             <!-- Sub-Tabs Admin -->
             <div class="grid grid-cols-3 gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200">
@@ -1851,34 +1829,7 @@ contoh3@gmail.com|sandi123" class="w-full bg-slate-50 border border-slate-200 ro
       }
       document.body.removeChild(textarea);
     }
-
-    function openSqlModal() {
-      const m = document.getElementById('sql-modal');
-      m.classList.remove('hidden');
-      m.classList.add('flex');
-      lucide.createIcons();
-    }
-    function closeSqlModal() {
-      const m = document.getElementById('sql-modal');
-      m.classList.add('hidden');
-      m.classList.remove('flex');
-    }
-    function copySqlScript() {
-      const sql = document.getElementById('sql-script-text').innerText;
-      copyText(sql, 'Script SQL Supabase');
-    }
-
-    // GENERATOR FILE ZIP LENGKAP (SIAP DEPLOY KE NETLIFY / CLOUDFLARE / GITHUB)
-    async function downloadProjectZip() {
-      if (typeof JSZip === 'undefined') {
-        showToast('Library ZIP sedang dimuat, coba beberapa detik lagi.', 'warning');
-        return;
-      }
-      try {
-        const zip = new JSZip();
-        const fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-        const sqlScript = document.getElementById('sql-script-text').innerText;
-        const readmeText = [
+  
           'FIH - Setor Gmail & Payment Analytics (UI Terbaru + Sistem Stabil)',
           '===================================================================',
           '1. Unggah file index.html ini ke GitHub, Netlify, atau Cloudflare Pages.',
