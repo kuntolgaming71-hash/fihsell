@@ -1,19 +1,632 @@
-<!-- 1. TAMPILKAN DI DASHBOARD (Letakkan di halaman Dashboard) -->
-<div id="dashboard-rate-info" class="rate-banner" style="padding:12px 16px; border-radius:12px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); font-weight:600; margin-bottom:14px;">
-  Harga per email: Good 4k • Captha 2k
-</div>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>FIH — Platform Setoran Gmail</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<!-- 2. TAMPILKAN DI ADMIN PANEL (Untuk ubah harga Good & Captha langsung dari web) -->
-<div class="admin-rate-box" style="display:grid; gap:10px; padding:14px; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); margin-top:12px;">
-  <div style="font-weight:700; font-size:14px;">Pengaturan Harga Setoran (IDR)</div>
-  
-  <label style="font-size:12px; opacity:0.85;">Harga Good (IDR)</label>
-  <input id="admin-rate-good" type="number" min="0" step="100" value="4000" style="padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.15);" />
+    <!-- AUTH SCREEN (Tanpa SQL di Login) -->
+    <section id="auth-screen" class="auth-screen">
+      <div class="auth-card glass-card animate-spring-in">
+        <div class="brand-badge">FIH</div>
+        <h1 class="auth-title">Selamat Datang di FIH</h1>
+        <p class="auth-subtitle">Manajemen setoran Gmail cepat, transparan, &amp; mobile-first.</p>
 
-  <label style="font-size:12px; opacity:0.85;">Harga Captha (IDR)</label>
-  <input id="admin-rate-captha" type="number" min="0" step="100" value="2000" style="padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.15);" />
+        <div class="segmented-control" role="tablist">
+          <button type="button" class="seg-btn active" data-auth-tab="login">Masuk</button>
+          <button type="button" class="seg-btn" data-auth-tab="register">Daftar</button>
+        </div>
 
-  <button id="btn-save-rates" type="button" style="padding:10px 14px; border-radius:8px; font-weight:700; cursor:pointer;">
-    Simpan Harga
-  </button>
-</div>
+        <!-- Form Login -->
+        <form id="login-form" class="auth-form">
+          <div class="field-group">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" placeholder="nama@email.com" required autocomplete="email" />
+          </div>
+          <div class="field-group">
+            <label for="login-password">Kata Sandi</label>
+            <input type="password" id="login-password" placeholder="Masukkan kata sandi" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Masuk Sekarang</button>
+        </form>
+
+        <!-- Form Register -->
+        <form id="register-form" class="auth-form hidden">
+          <div class="field-group">
+            <label for="reg-username">Username</label>
+            <input type="text" id="reg-username" placeholder="Contoh: rizky_fih" required minlength="3" />
+          </div>
+          <div class="field-group">
+            <label for="reg-email">Email</label>
+            <input type="email" id="reg-email" placeholder="nama@email.com" required autocomplete="email" />
+          </div>
+          <div class="field-group">
+            <label for="reg-password">Kata Sandi</label>
+            <input type="password" id="reg-password" placeholder="Minimal 6 karakter" required minlength="6" autocomplete="new-password" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Buat Akun</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- MAIN APP -->
+    <div id="main-layout" class="main-layout hidden">
+      <!-- Top Bar -->
+      <header class="top-bar glass-header">
+        <div class="top-bar-left">
+          <span class="logo-pill">FIH</span>
+          <div>
+            <p class="greeting-label">Halo,</p>
+            <h2 id="header-username" class="greeting-name">User FIH</h2>
+          </div>
+        </div>
+        <div class="top-bar-right">
+          <button type="button" id="btn-open-notif" class="icon-btn" aria-label="Notifikasi">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span id="header-notif-dot" class="dot-badge hidden"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW: DASHBOARD -->
+      <main id="view-dashboard" class="page-view active">
+        <!-- Ringkasan Saldo & Statistik -->
+        <div class="hero-card">
+          <div class="hero-row">
+            <div>
+              <span class="hero-label">Saldo Tersedia (Siap Tarik)</span>
+              <h3 id="dash-available-balance" class="hero-amount">Rp0</h3>
+              <span class="hero-sub-income">Total Pendapatan: <strong id="dash-total-income">Rp0</strong></span>
+            </div>
+            <div class="hero-right-col">
+              <span id="dash-approved-count" class="pill-tag">0 Approved</span>
+              <button type="button" id="btn-go-withdraw" class="btn-withdraw-hero">Tarik Saldo</button>
+            </div>
+          </div>
+          <div class="hero-stats-grid">
+            <div class="mini-stat">
+              <span>Pending</span>
+              <strong id="dash-pending-count">0</strong>
+            </div>
+            <div class="mini-stat">
+              <span>Gmail Good</span>
+              <strong id="dash-good-count">0</strong>
+            </div>
+            <div class="mini-stat">
+              <span>Gmail Captha</span>
+              <strong id="dash-captha-count">0</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grafik Pendapatan Dinamis -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Grafik Pendapatan</h4>
+            <span class="badge-soft">7 Hari Terakhir</span>
+          </div>
+          <div id="income-chart" class="chart-container" aria-label="Grafik pendapatan dinamis"></div>
+        </section>
+
+        <!-- Informasi dari Admin Panel (Khusus Dashboard) -->
+        <section class="card info-highlight-card">
+          <div class="card-header">
+            <h4>Informasi Dashboard</h4>
+            <span class="badge-primary">Info Admin</span>
+          </div>
+          <div id="dashboard-admin-info-list" class="info-list">
+            <p class="muted-text">Belum ada informasi terbaru dari admin.</p>
+          </div>
+        </section>
+
+        <!-- Komunitas Resmi -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Komunitas &amp; Update Resmi</h4>
+          </div>
+          <div class="community-grid">
+            <a href="https://t.me/FIHgmail" target="_blank" rel="noopener noreferrer" class="community-btn telegram">
+              <span class="comm-icon">TG</span>
+              <div>
+                <strong>Grup Telegram</strong>
+                <small>t.me/FIHgmail</small>
+              </div>
+            </a>
+            <a href="https://whatsapp.com/channel/0029Vb8x7L2J93wOcwNLOj0Y" target="_blank" rel="noopener noreferrer" class="community-btn whatsapp">
+              <span class="comm-icon">WA</span>
+              <div>
+                <strong>WhatsApp Channel</strong>
+                <small>Info &amp; Open Slot</small>
+              </div>
+            </a>
+          </div>
+        </section>
+
+        <!-- Rules / Aturan Setoran Gmail (5 Poin) -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Rules Setoran Gmail</h4>
+            <span class="badge-warn">Wajib Patuh</span>
+          </div>
+          <ol class="rules-list">
+            <li><strong>Wajib Fresh:</strong> Akun Gmail harus baru dibuat dan belum pernah dipakai untuk layanan apa pun.</li>
+            <li><strong>Nama Bebas / Generate:</strong> Gunakan nama wajar atau manfaatkan fitur <em>Generate Nama Gmail</em> di menu Setoran.</li>
+            <li><strong>Password Sesuai &amp; No Kapital:</strong> Kata sandi wajib sama dengan data setoran dan menggunakan <strong>huruf kecil semua</strong> (tanpa huruf kapital).</li>
+            <li><strong>Umur Minimal 18 Tahun:</strong> Tahun lahir wajib ≥ 18 tahun dan dilarang keras menggunakan akun anak / Family Link.</li>
+            <li><strong>Tanpa Pemulihan:</strong> Dilarang menautkan nomor telepon atau email pemulihan (recovery email).</li>
+          </ol>
+        </section>
+
+        <!-- Syarat & Ketentuan + Penjelasan Umum Fitur Website -->
+        <section class="card">
+          <details class="accordion-item" open>
+            <summary>Syarat &amp; Ketentuan Platform FIH</summary>
+            <div class="accordion-body">
+              <p>1. Setiap setoran Gmail yang masuk akan melalui proses pengecekan manual oleh admin untuk memastikan kepatuhan terhadap seluruh aturan.</p>
+              <p>2. Akun yang terbukti melanggar rules (memakai nomor/email pemulihan, password tidak sesuai, akun lama, atau Family Link) berhak ditolak.</p>
+              <p>3. Pendapatan dihitung berdasarkan setoran yang telah berstatus <strong>Approved</strong> sesuai tarif kategori yang berlaku saat setoran dibuka.</p>
+              <p>4. Hadiah Leaderboard (Juara 1: Rp15.000, Juara 2: Rp10.000, Juara 3: Rp5.000) hanya berlaku bagi peserta yang memenuhi syarat minimal <strong>100 setoran Gmail</strong>.</p>
+            </div>
+          </details>
+
+          <details class="accordion-item">
+            <summary>Penjelasan Umum Fitur Website</summary>
+            <div class="accordion-body">
+              <ul class="guide-list">
+                <li><strong>Dashboard:</strong> Menampilkan ringkasan pendapatan, grafik dinamis, pengumuman admin, link komunitas, serta aturan lengkap.</li>
+                <li><strong>Setoran:</strong> Tempat menyetor akun <em>Gmail Good</em> dan <em>Gmail Captha</em> sesuai status jalur yang sedang dibuka admin, dilengkapi generator nama otomatis.</li>
+                <li><strong>Leaderboard:</strong> Papan peringkat top penyetor (minimal 100 Gmail) untuk memperebutkan hadiah peringkat 1–3.</li>
+                <li><strong>Notifikasi:</strong> Pemberitahuan hasil verifikasi setoran dan info penting langsung ke akun Anda.</li>
+                <li><strong>Profil &amp; Laporan:</strong> Ubah username, foto profil, serta kirim laporan kendala atau umpan balik ke admin.</li>
+              </ul>
+            </div>
+          </details>
+        </section>
+      </main>
+
+      <!-- VIEW: SETORAN GMAIL -->
+      <main id="view-deposit" class="page-view">
+        <div class="banner-notice">
+          <strong>Estimasi Pengecekan: 24–30 Jam</strong>
+          <p>Setiap setoran diperiksa secara teliti. Pantau hasil verifikasi melalui menu Notifikasi atau Riwayat di bawah.</p>
+        </div>
+
+        <!-- Status Jalur Setoran -->
+        <div class="channel-status-grid">
+          <div class="status-box">
+            <span>Jalur Gmail Good</span>
+            <strong id="status-good-badge" class="status-pill open">BUKA</strong>
+          </div>
+          <div class="status-box">
+            <span>Jalur Gmail Captha</span>
+            <strong id="status-captha-badge" class="status-pill open">BUKA</strong>
+          </div>
+        </div>
+
+        <!-- Generator Nama Gmail (Tanpa AI) -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Generator Nama Gmail</h4>
+            <span class="badge-soft">Instan</span>
+          </div>
+          <p class="muted-text small-gap">Buat nama email alami huruf kecil semua siap pakai sesuai aturan.</p>
+          <div class="gen-controls">
+            <select id="gen-count" aria-label="Jumlah nama Gmail">
+              <option value="1">1 Nama</option>
+              <option value="5" selected>5 Nama</option>
+              <option value="10">10 Nama</option>
+            </select>
+            <button type="button" id="btn-generate-gmail" class="btn btn-secondary">Generate</button>
+          </div>
+          <div id="generated-list" class="generated-list"></div>
+        </section>
+
+        <!-- Form Setoran Gmail Good & Captha (Massal / Multi-Baris) -->
+        <section class="card">
+          <div class="segmented-control" role="tablist">
+            <button type="button" class="seg-btn active" data-deposit-type="good">Setor Gmail Good</button>
+            <button type="button" class="seg-btn" data-deposit-type="captha">Setor Gmail Captha</button>
+          </div>
+
+          <div id="deposit-closed-alert" class="closed-alert hidden">
+            <strong>Jalur Setoran Ditutup Sementara</strong>
+            <p id="deposit-closed-msg">Admin sedang menutup jalur setoran kategori ini. Silakan cek kembali berkala.</p>
+          </div>
+
+          <form id="deposit-form" class="stack-form">
+            <input type="hidden" id="deposit-category" value="good" />
+            <div class="field-group">
+              <label for="deposit-bulk-list">Daftar Akun Gmail (Bisa Banyak / Multi-Baris)</label>
+              <textarea id="deposit-bulk-list" rows="6" placeholder="Satu baris satu akun. Contoh:&#10;andiputra4821@gmail.com:sandibaru123&#10;rizkysaputra9901@gmail.com|sandibaru123&#10;bimapratama1122@gmail.com (opsional tanpa sandi)" required></textarea>
+              <small class="hint-text">Bisa setor banyak sekaligus (1 baris = 1 akun). Format bisa <code>email:sandi</code>, <code>email|sandi</code>, <code>email sandi</code>, atau cukup <code>email</code> saja.</small>
+            </div>
+            <div class="field-group">
+              <label for="deposit-password-select">Pilih Kata Sandi Setoran (Diatur Admin)</label>
+              <select id="deposit-password-select" required></select>
+              <small id="deposit-pass-hint" class="hint-text">Pilihan sandi mengikuti pengaturan yang sedang di-ON-kan oleh admin.</small>
+            </div>
+            <div class="field-group">
+              <label for="deposit-note">Catatan Tambahan (Opsional)</label>
+              <input type="text" id="deposit-note" placeholder="Contoh: fresh baru buat hari ini" />
+            </div>
+            <button type="submit" id="btn-submit-deposit" class="btn btn-primary btn-full">Kirim Setoran Massal</button>
+          </form>
+        </section>
+
+        <!-- Riwayat Setoran User -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Riwayat Setoran Saya</h4>
+            <span id="user-deposit-total" class="badge-soft">0 Akun</span>
+          </div>
+          <div id="user-deposits-list" class="list-stack">
+            <p class="muted-text">Belum ada riwayat setoran.</p>
+          </div>
+        </section>
+      </main>
+
+      <!-- VIEW: LEADERBOARD -->
+      <main id="view-leaderboard" class="page-view">
+        <div class="hero-card leaderboard-hero">
+          <span class="hero-label">Kompetisi Top Penyetor</span>
+          <h3 class="hero-title-md">Syarat Minimal: 100 Setoran Gmail</h3>
+          <div class="prize-row">
+            <div class="prize-box gold">
+              <span>Juara 1</span>
+              <strong>Rp15.000</strong>
+            </div>
+            <div class="prize-box silver">
+              <span>Juara 2</span>
+              <strong>Rp10.000</strong>
+            </div>
+            <div class="prize-box bronze">
+              <span>Juara 3</span>
+              <strong>Rp5.000</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progres User Menuju 100 Gmail -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Progres Kelayakan Anda</h4>
+            <strong id="lb-user-progress-text">0 / 100 Gmail</strong>
+          </div>
+          <div class="progress-track">
+            <div id="lb-user-progress-bar" class="progress-fill" style="width: 0%;"></div>
+          </div>
+          <p id="lb-user-status-msg" class="muted-text small-top">Setor minimal 100 Gmail untuk masuk papan peringkat.</p>
+        </section>
+
+        <!-- Daftar Peringkat -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Peringkat Memenuhi Syarat (≥ 100)</h4>
+          </div>
+          <div id="leaderboard-list" class="list-stack">
+            <p class="muted-text">Belum ada peserta yang mencapai 100 setoran Gmail.</p>
+          </div>
+        </section>
+      </main>
+
+      <!-- VIEW: NOTIFIKASI -->
+      <main id="view-notifications" class="page-view">
+        <section class="card">
+          <div class="card-header">
+            <h4>Notifikasi</h4>
+            <button type="button" id="btn-mark-all-read" class="text-btn">Tandai Dibaca</button>
+          </div>
+          <div id="notifications-list" class="list-stack">
+            <p class="muted-text">Belum ada notifikasi.</p>
+          </div>
+        </section>
+      </main>
+
+      <!-- VIEW: PENARIKAN SALDO (WITHDRAW) -->
+      <main id="view-withdraw" class="page-view">
+        <div class="hero-card">
+          <div class="hero-row">
+            <div>
+              <span class="hero-label">Saldo Siap Tarik</span>
+              <h3 id="wd-available-balance" class="hero-amount">Rp0</h3>
+              <span class="hero-sub-income">Minimal penarikan: <strong id="wd-min-label">Rp1</strong></span>
+            </div>
+            <button type="button" id="btn-back-dashboard" class="pill-tag" style="border:none;cursor:pointer;">← Home</button>
+          </div>
+        </div>
+
+        <section class="card">
+          <div class="card-header">
+            <h4>Ajukan Penarikan Saldo</h4>
+            <span id="wd-min-badge" class="badge-primary">Min. Rp1</span>
+          </div>
+          <form id="withdraw-form" class="stack-form">
+            <div class="field-group">
+              <label for="wd-method">Metode Pencairan</label>
+              <select id="wd-method" required>
+                <option value="DANA">DANA</option>
+                <option value="GoPay">GoPay</option>
+                <option value="OVO">OVO</option>
+                <option value="ShopeePay">ShopeePay</option>
+                <option value="SeaBank">SeaBank</option>
+                <option value="BCA">Transfer Bank BCA</option>
+                <option value="BRI">Transfer Bank BRI</option>
+                <option value="Mandiri">Transfer Bank Mandiri</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="wd-account-number">Nomor E-Wallet / Rekening</label>
+              <input type="text" id="wd-account-number" placeholder="Contoh: 081234567890" required inputmode="numeric" />
+            </div>
+            <div class="field-group">
+              <label for="wd-account-name">Nama Penerima (Sesuai Akun)</label>
+              <input type="text" id="wd-account-name" placeholder="Contoh: Andi Pratama" required />
+            </div>
+            <div class="field-group">
+              <label for="wd-amount">Nominal Penarikan (Rp)</label>
+              <input type="number" id="wd-amount" min="1" step="1" placeholder="Minimal 1" required />
+              <small id="wd-method-hint" class="hint-text">Minimal penarikan untuk DANA &amp; GoPay adalah Rp1 (SeaBank &amp; metode lain Rp10.000).</small>
+              <div class="quick-amount-row">
+                <button type="button" class="btn btn-secondary btn-sm" data-wd-preset="1">Rp1</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-wd-preset="10000">Rp10.000</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-wd-preset="25000">Rp25.000</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-wd-all">Semua</button>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Kirim Permintaan Penarikan</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h4>Riwayat Penarikan Saya</h4>
+            <span id="wd-history-count" class="badge-soft">0 Riwayat</span>
+          </div>
+          <div id="user-withdraws-list" class="list-stack">
+            <p class="muted-text">Belum ada riwayat penarikan saldo.</p>
+          </div>
+        </section>
+      </main>
+
+      <!-- VIEW: PROFIL & LAPORAN -->
+      <main id="view-profile" class="page-view">
+        <section class="card profile-card">
+          <div class="avatar-wrapper">
+            <img id="profile-avatar-preview" src="https://ui-avatars.com/api/?name=FIH&background=0f172a&color=fff" alt="Foto Profil" class="avatar-img" />
+            <label for="profile-avatar-input" class="avatar-edit-btn" title="Ganti Foto Profil">Ubah Foto</label>
+            <input type="file" id="profile-avatar-input" accept="image/*" class="hidden" />
+          </div>
+          <h3 id="profile-display-name" class="profile-name">User FIH</h3>
+          <p id="profile-display-email" class="muted-text">user@email.com</p>
+          <span id="profile-role-badge" class="pill-tag">Member</span>
+        </section>
+
+        <!-- Edit Username -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Edit Profil</h4>
+          </div>
+          <form id="profile-form" class="stack-form">
+            <div class="field-group">
+              <label for="edit-username">Username Baru</label>
+              <input type="text" id="edit-username" placeholder="Masukkan username baru" required minlength="3" />
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Simpan Perubahan</button>
+          </form>
+        </section>
+
+        <!-- Laporan / Umpan Balik -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Laporan &amp; Umpan Balik</h4>
+          </div>
+          <form id="feedback-form" class="stack-form">
+            <div class="field-group">
+              <label for="feedback-category">Kategori</label>
+              <select id="feedback-category">
+                <option value="kendala">Laporan Kendala / Bug</option>
+                <option value="setoran">Pertanyaan Setoran</option>
+                <option value="saran">Saran &amp; Umpan Balik</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="feedback-message">Pesan untuk Admin</label>
+              <textarea id="feedback-message" rows="3" placeholder="Tuliskan kendala atau masukan Anda secara jelas..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-full">Kirim Laporan</button>
+          </form>
+        </section>
+
+        <button type="button" id="btn-logout" class="btn btn-danger btn-full">Keluar Akun</button>
+      </main>
+
+      <!-- VIEW: ADMIN PANEL -->
+      <main id="view-admin" class="page-view">
+        <div class="admin-banner">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <strong>Admin Control Center</strong>
+            <button type="button" id="btn-admin-sync" class="btn btn-secondary btn-sm" style="background:rgba(255,255,255,0.16);color:#fff;">Refresh Data</button>
+          </div>
+          <p>Kelola jalur setoran, verifikasi antrean 1-klik, informasi dashboard, laporan, dan log aktivitas.</p>
+        </div>
+
+        <!-- Kontrol Buka / Tutup Jalur Setoran -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Kontrol Jalur Setoran</h4>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <strong>Setoran Gmail Good</strong>
+              <p class="muted-text">Buka atau tutup penerimaan akun Good</p>
+            </div>
+            <button type="button" id="toggle-good-btn" class="toggle-switch active" aria-pressed="true">BUKA</button>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <strong>Setoran Gmail Captha</strong>
+              <p class="muted-text">Buka atau tutup penerimaan akun Captha</p>
+            </div>
+            <button type="button" id="toggle-captha-btn" class="toggle-switch active" aria-pressed="true">BUKA</button>
+          </div>
+        </section>
+
+        <!-- Kontrol Pilihan Kata Sandi Setoran (ON / OFF) -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Kontrol Pilihan Kata Sandi</h4>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <strong>Sandi: <code>sgsg1122</code></strong>
+              <p class="muted-text">ON-kan jika buyer membutuhkan sandi sgsg1122</p>
+            </div>
+            <button type="button" id="toggle-pass-sgsg-btn" class="toggle-switch active" aria-pressed="true">ON</button>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <strong>Sandi: <code>goldacok</code></strong>
+              <p class="muted-text">ON-kan jika buyer membutuhkan sandi goldacok</p>
+            </div>
+            <button type="button" id="toggle-pass-gold-btn" class="toggle-switch" aria-pressed="false">OFF</button>
+          </div>
+        </section>
+
+        <!-- Verifikasi Semi-Otomatis 1-Klik (Antrean 1 per 1) -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Antrean Verifikasi 1-Klik</h4>
+            <span id="admin-queue-count" class="badge-primary">0 Antrean</span>
+          </div>
+          <div id="admin-queue-card" class="queue-box">
+            <p class="muted-text">Tidak ada setoran pending saat ini.</p>
+          </div>
+        </section>
+
+        <!-- Permintaan Penarikan Saldo User -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Permintaan Penarikan Saldo</h4>
+            <span id="admin-wd-count" class="badge-warn">0 Pending</span>
+          </div>
+          <div id="admin-withdraw-list" class="list-stack">
+            <p class="muted-text">Belum ada permintaan penarikan saldo.</p>
+          </div>
+        </section>
+
+        <!-- Tambah / Ubah Informasi Khusus Dashboard -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Informasi Khusus Dashboard</h4>
+          </div>
+          <form id="admin-info-form" class="stack-form">
+            <div class="field-group">
+              <label for="admin-info-title">Judul Informasi</label>
+              <input type="text" id="admin-info-title" placeholder="Contoh: Open Slot Gmail Good Malam Ini" required />
+            </div>
+            <div class="field-group">
+              <label for="admin-info-content">Isi Informasi</label>
+              <textarea id="admin-info-content" rows="3" placeholder="Tulis pengumuman yang akan tampil di Dashboard..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Terbitkan ke Dashboard</button>
+          </form>
+          <div id="admin-info-manage-list" class="list-stack small-top"></div>
+        </section>
+
+        <!-- Laporan & Umpan Balik Masuk -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Laporan / Umpan Balik User</h4>
+          </div>
+          <div id="admin-feedback-list" class="list-stack">
+            <p class="muted-text">Belum ada laporan masuk.</p>
+          </div>
+        </section>
+
+        <!-- Log Aktivitas Login User -->
+        <section class="card">
+          <div class="card-header">
+            <h4>Log Aktivitas Login User</h4>
+          </div>
+          <div id="admin-login-logs" class="list-stack">
+            <p class="muted-text">Belum ada catatan aktivitas login.</p>
+          </div>
+        </section>
+      </main>
+
+      <!-- FLOATING PILL BOTTOM NAVIGATION (Glassmorphism + Kapsul Aktif + Lencana Merah) -->
+      <nav class="floating-nav-wrap" aria-label="Navigasi Utama">
+        <div class="floating-pill-bar">
+          <button type="button" class="nav-pill active" data-target="view-dashboard">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            </svg>
+            <span class="nav-label">Home</span>
+          </button>
+
+          <button type="button" class="nav-pill" data-target="view-deposit">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span class="nav-label">Setor</span>
+          </button>
+
+          <button type="button" class="nav-pill" data-target="view-leaderboard">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+              <path d="M4 22h16"/>
+              <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+              <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+            </svg>
+            <span class="nav-label">Rank</span>
+          </button>
+
+          <button type="button" class="nav-pill" data-target="view-notifications">
+            <div class="nav-icon-box">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span id="nav-notif-badge" class="notif-badge hidden">0</span>
+            </div>
+            <span class="nav-label">Notif</span>
+          </button>
+
+          <button type="button" class="nav-pill" data-target="view-profile">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M4 20c1.5-4 6-6 8-6s6.5 2 8 6"/>
+            </svg>
+            <span class="nav-label">Profil</span>
+          </button>
+
+          <button type="button" id="nav-admin-tab" class="nav-pill hidden" data-target="view-admin">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span class="nav-label">Admin</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
